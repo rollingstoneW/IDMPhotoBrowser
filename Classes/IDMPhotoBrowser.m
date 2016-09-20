@@ -467,6 +467,11 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
                                                                                     toView:nil] :
         _senderViewOriginalFrame;
 
+    // 适配导航
+    if (senderViewOriginalFrame.origin.y == 0) {
+        senderViewOriginalFrame.origin.y = 64;
+    }
+
     if (_usePopAnimation) {
         [self animateView:resizableImageView
                   toFrame:senderViewOriginalFrame
