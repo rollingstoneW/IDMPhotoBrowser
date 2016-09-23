@@ -375,39 +375,47 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
 
     UIImage *imageFromView = _scaleImage ? _scaleImage : [self getImageFromView:_senderViewForAnimation];
 
-    
+
     if (_senderViewForAnimation.contentMode == UIViewContentModeScaleAspectFill) {
         CGFloat imageAspect = imageFromView.size.width / imageFromView.size.height;
-        CGFloat viewAspect = CGRectGetWidth(_senderViewForAnimation.frame) / CGRectGetHeight(_senderViewForAnimation.frame);
-        
+        CGFloat viewAspect = CGRectGetWidth(_senderViewForAnimation.frame) / CGRectGetHeight(
+            _senderViewForAnimation.frame);
+
         CGRect originalFrame = [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
+
+        CGFloat screenWidth = CGRectGetWidth([UIScreen mainScreen].bounds);
+        CGFloat screenHeight = CGRectGetHeight([UIScreen mainScreen].bounds);
+
         // 水平方向没显示完整
         if (imageAspect > viewAspect) {
-            CGFloat width = imageFromView.size.width;
+            CGFloat width = imageFromView.size.width > screenWidth ? screenWidth : imageFromView.size.width;
             CGFloat height = CGRectGetHeight(originalFrame);
 
             CGFloat x = CGRectGetMinX(originalFrame) - (width - CGRectGetMinX(originalFrame) / 2);
             x = x < 0.f ? 0.f : x;
             CGFloat y = CGRectGetMinY(originalFrame);
-            
+
             _senderViewOriginalFrame = CGRectMake(x, y, width, height);
             // 竖直方向没显示完整
         } else {
             CGFloat width = imageFromView.size.width;
-            CGFloat height = CGRectGetHeight(originalFrame);
+            CGFloat height = CGRectGetHeight(originalFrame) > screenHeight ? screenHeight : CGRectGetHeight(
+                originalFrame);
 
             CGFloat x = CGRectGetMinX(originalFrame);
             CGFloat y = CGRectGetMinY(originalFrame) - (height - CGRectGetMinY(originalFrame) / 2);
             y = y < 0.f ? 0.f : y;
-            
+
             _senderViewOriginalFrame = CGRectMake(x, y, width, height);
         }
-        
-        _senderViewOriginalFrame = [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
+
+        _senderViewOriginalFrame =
+            [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
     } else {
-        _senderViewOriginalFrame = [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
+        _senderViewOriginalFrame =
+            [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
     }
-    
+
 
     UIView *fadeView = [[UIView alloc] initWithFrame:_applicationWindow.bounds];
     fadeView.backgroundColor = [UIColor clearColor];
@@ -447,7 +455,7 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
             completion();
         }];
     }
-}
+} /* performPresentAnimation */
 
 - (void) performCloseAnimationWithScrollView:(IDMZoomingScrollView *)scrollView {
     if ([_delegate respondsToSelector:@selector(willDisappearPhotoBrowser:)]) {
