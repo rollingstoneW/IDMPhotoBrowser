@@ -375,7 +375,39 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
 
     UIImage *imageFromView = _scaleImage ? _scaleImage : [self getImageFromView:_senderViewForAnimation];
 
-    _senderViewOriginalFrame = [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
+    
+    if (_senderViewForAnimation.contentMode == UIViewContentModeScaleAspectFill) {
+        CGFloat imageAspect = imageFromView.size.width / imageFromView.size.height;
+        CGFloat viewAspect = CGRectGetWidth(_senderViewForAnimation.frame) / CGRectGetHeight(_senderViewForAnimation.frame);
+        
+        CGRect originalFrame = [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
+        // 水平方向没显示完整
+        if (imageAspect > viewAspect) {
+            CGFloat width = imageFromView.size.width;
+            CGFloat height = CGRectGetHeight(originalFrame);
+
+            CGFloat x = CGRectGetMinX(originalFrame) - (width - CGRectGetMinX(originalFrame) / 2);
+            x = x < 0.f ? 0.f : x;
+            CGFloat y = CGRectGetMinY(originalFrame);
+            
+            _senderViewOriginalFrame = CGRectMake(x, y, width, height);
+            // 竖直方向没显示完整
+        } else {
+            CGFloat width = imageFromView.size.width;
+            CGFloat height = CGRectGetHeight(originalFrame);
+
+            CGFloat x = CGRectGetMinX(originalFrame);
+            CGFloat y = CGRectGetMinY(originalFrame) - (height - CGRectGetMinY(originalFrame) / 2);
+            y = y < 0.f ? 0.f : y;
+            
+            _senderViewOriginalFrame = CGRectMake(x, y, width, height);
+        }
+        
+        _senderViewOriginalFrame = [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
+    } else {
+        _senderViewOriginalFrame = [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
+    }
+    
 
     UIView *fadeView = [[UIView alloc] initWithFrame:_applicationWindow.bounds];
     fadeView.backgroundColor = [UIColor clearColor];
@@ -557,6 +589,9 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
 }
 
 - (UIImage *) getImageFromView:(UIView *)view {
+    if ([view isKindOfClass:[UIImageView class]] && ((UIImageView *)view).image) {
+        return ((UIImageView *)view).image;
+    }
     UIGraphicsBeginImageContextWithOptions(view.bounds.size, YES, 2);
     [view.layer renderInContext:UIGraphicsGetCurrentContext()];
     UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
