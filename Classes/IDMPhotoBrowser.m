@@ -375,7 +375,6 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
 
     UIImage *imageFromView = _scaleImage ? _scaleImage : [self getImageFromView:_senderViewForAnimation];
 
-
     if (_senderViewForAnimation.contentMode == UIViewContentModeScaleAspectFill) {
         CGFloat imageAspect = imageFromView.size.width / imageFromView.size.height;
         CGFloat viewAspect = CGRectGetWidth(_senderViewForAnimation.frame) / CGRectGetHeight(
@@ -388,29 +387,26 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
 
         // 水平方向没显示完整
         if (imageAspect > viewAspect) {
-            CGFloat width = imageFromView.size.width > screenWidth ? screenWidth : imageFromView.size.width;
             CGFloat height = CGRectGetHeight(originalFrame);
+            CGFloat width = height / imageFromView.size.height * imageFromView.size.width;
 
-            CGFloat x = CGRectGetMinX(originalFrame) - (width - CGRectGetMinX(originalFrame) / 2);
-            x = x < 0.f ? 0.f : x;
+            CGFloat x = CGRectGetMinX(originalFrame) - ((width - CGRectGetWidth(originalFrame)) / 2);
+//            x = x < 0.f ? 0.f : x;
             CGFloat y = CGRectGetMinY(originalFrame);
 
             _senderViewOriginalFrame = CGRectMake(x, y, width, height);
             // 竖直方向没显示完整
         } else {
-            CGFloat width = imageFromView.size.width;
-            CGFloat height = CGRectGetHeight(originalFrame) > screenHeight ? screenHeight : CGRectGetHeight(
-                originalFrame);
+            CGFloat width = CGRectGetWidth(originalFrame);
+            CGFloat height = width / imageFromView.size.width * imageFromView.size.height;
 
             CGFloat x = CGRectGetMinX(originalFrame);
-            CGFloat y = CGRectGetMinY(originalFrame) - (height - CGRectGetMinY(originalFrame) / 2);
-            y = y < 0.f ? 0.f : y;
+            CGFloat y = CGRectGetMinY(originalFrame) - ((height - CGRectGetHeight(originalFrame)) / 2);
+            
+//            y = y < 0.f ? 0.f : y;
 
             _senderViewOriginalFrame = CGRectMake(x, y, width, height);
         }
-
-        _senderViewOriginalFrame =
-            [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
     } else {
         _senderViewOriginalFrame =
             [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
@@ -423,7 +419,6 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
 
     UIImageView *resizableImageView = [[UIImageView alloc] initWithImage:imageFromView];
     resizableImageView.frame = _senderViewOriginalFrame;
-    resizableImageView.clipsToBounds = YES;
     resizableImageView.contentMode =
         _senderViewForAnimation ? _senderViewForAnimation.contentMode : UIViewContentModeScaleAspectFill;
     resizableImageView.backgroundColor = [UIColor clearColor];
@@ -450,7 +445,7 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
                completion:completion];
     } else {
         [UIView animateWithDuration:_animationDuration animations:^{
-            resizableImageView.layer.frame = finalImageViewFrame;
+            resizableImageView.frame = finalImageViewFrame;
         } completion:^(BOOL finished) {
             completion();
         }];
@@ -509,7 +504,7 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
                completion:completion];
     } else {
         [UIView animateWithDuration:_animationDuration animations:^{
-            resizableImageView.layer.frame = _senderViewOriginalFrame;
+            resizableImageView.frame = _senderViewOriginalFrame;
         } completion:^(BOOL finished) {
             completion();
         }];
