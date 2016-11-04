@@ -95,6 +95,28 @@ caption = _caption;
     return photos;
 }
 
++ (NSArray *)photosWithURLs:(NSArray *)urlsArray placeholderUrlArray:(NSArray *)placeholderUrls{
+    NSMutableArray *photos = [NSMutableArray arrayWithCapacity:urlsArray.count];
+    for (NSInteger i=0; i<urlsArray.count; i++) {
+        id originalUrl = [urlsArray objectAtIndex:i];
+        id placeholderUrl = [placeholderUrls objectAtIndex:i];
+        
+        if ([originalUrl isKindOfClass:[NSURL class]] && [placeholderUrl isKindOfClass:[NSURL class]]) {
+            IDMPhoto *photo = [IDMPhoto photoWithURL:originalUrl];
+            photo.placeholderImage = [[SDImageCache sharedImageCache] imageFromDiskCacheForKey:[placeholderUrl absoluteString]];
+            [photos addObject:photo];
+        }
+        
+        if ([originalUrl isKindOfClass:[NSString class]]  && [placeholderUrl isKindOfClass:[NSString class]]) {
+            IDMPhoto *photo = [IDMPhoto photoWithURL:[NSURL URLWithString:originalUrl]];
+            photo.placeholderImage = [[SDImageCache sharedImageCache] imageFromDiskCacheForKey:placeholderUrl];
+            [photos addObject:photo];
+        }
+    }
+    
+    return photos;
+}
+
 #pragma mark NSObject
 
 - (id)initWithImage:(UIImage *)image {
