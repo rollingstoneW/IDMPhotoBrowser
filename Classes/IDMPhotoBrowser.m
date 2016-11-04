@@ -473,8 +473,7 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
 
     UIImageView *resizableImageView = [[UIImageView alloc] initWithImage:imageFromView];
     resizableImageView.frame = imageViewFrame;
-    resizableImageView.contentMode =
-        _senderViewForAnimation ? _senderViewForAnimation.contentMode : UIViewContentModeScaleAspectFill;
+    resizableImageView.contentMode = UIViewContentModeScaleAspectFill;
     resizableImageView.backgroundColor = [UIColor clearColor];
     resizableImageView.clipsToBounds = YES;
     [_applicationWindow addSubview:resizableImageView];
@@ -525,7 +524,13 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
 
     CGFloat aspect = imageSize.width / imageSize.height;
     if (maxWidth / aspect <= maxHeight) {
-        animationFrame.size = CGSizeMake(maxWidth, maxWidth / aspect);
+        animationFrame.size = imageSize;
+        IDMZoomingScrollView *scrollView = [self pageDisplayedAtIndex:_currentPageIndex];
+        UIImage *imageFromView = [scrollView.photo underlyingImage];
+        if (imageFromView) {
+            animationFrame.size = CGSizeMake(maxWidth, maxWidth / aspect);
+        }
+        
     } else {
         animationFrame.size = CGSizeMake(maxHeight * aspect, maxHeight);
     }

@@ -116,7 +116,7 @@
         if (img) {
             // Hide ProgressView
             // _progressView.alpha = 0.0f;
-            if ([self.photoBrowser originalImageForPhoto:_photo]) {
+            if ([self hasOriginImage]) {
               [_progressView removeFromSuperview];
             }
 
@@ -124,13 +124,8 @@
             _photoImageView.image = img;
             _photoImageView.hidden = NO;
 
-            // Setup photo frame
-            CGRect photoImageViewFrame;
-            photoImageViewFrame.origin = CGPointZero;
-            photoImageViewFrame.size = img.size;
-
-            _photoImageView.frame = photoImageViewFrame;
-            self.contentSize = photoImageViewFrame.size;
+            _photoImageView.frame = [self centerForFrame];
+            self.contentSize = [self centerForFrame].size;
 
             // Set zoom to minimum zoom
             [self setMaxMinZoomScalesForCurrentBounds];
@@ -165,6 +160,10 @@
 
 #pragma mark - Setup
 
+- (BOOL)hasOriginImage{
+    return [self.photoBrowser originalImageForPhoto:_photo];
+}
+
 - (void) setMaxMinZoomScalesForCurrentBounds {
     // Reset
     self.maximumZoomScale = 1;
@@ -172,10 +171,9 @@
     self.zoomScale = 1;
 
     // Bail
-    if (_photoImageView.image == nil) {
+    if (_photoImageView.image == nil || ![self hasOriginImage]) {
         return;
     }
-
     // Sizes
     CGSize boundsSize = self.bounds.size;
     boundsSize.width -= 0.1;
@@ -205,13 +203,11 @@
             maxScale = minScale * 2;
         }
     }
-
     // Set
     self.maximumZoomScale = maxScale;
     self.minimumZoomScale = minScale;
     self.zoomScale = minScale;
 
-    // Reset position
     _photoImageView.frame = CGRectMake(0, 0, _photoImageView.frame.size.width, _photoImageView.frame.size.height);
     [self setNeedsLayout];
 }
@@ -225,28 +221,55 @@
     // Super
     [super layoutSubviews];
 
+    if (!CGRectEqualToRect(_photoImageView.frame, [self frameToCenter])) {
+         _photoImageView.frame = [self frameToCenter];
+    }
+}
+
+
+- (CGRect)centerForFrame{
+    
+    CGRect centerRect;
+    CGSize boundsSize = self.bounds.size;
+    CGSize imageSize = _photoImageView.image.size;
+    // Calculate Min
+    CGFloat xScale = boundsSize.width / imageSize.width;    // the scale needed to perfectly fit the image width-wise
+    CGFloat yScale = boundsSize.height / imageSize.height;  // the scale needed to perfectly fit the image height-wise
+    CGFloat minScale = MIN(xScale, yScale);
+    CGPoint origin = CGPointZero;
+    CGSize  size = CGSizeZero;
+    if (xScale >1) {
+        origin = CGPointMake((boundsSize.width - _photoImageView.image.size.width)/2 , (boundsSize.height - _photoImageView.image.size.height)/2);
+        size = _photoImageView.image.size;
+    }else{
+        origin = CGPointMake((boundsSize.width - _photoImageView.image.size.width * minScale)/2 , (boundsSize.height - _photoImageView.image.size.height * minScale)/2);
+        size = CGSizeMake( _photoImageView.image.size.width * minScale, _photoImageView.image.size.height * minScale);
+    }
+    
+    centerRect.origin = origin;
+    centerRect.size = size;
+    return centerRect;
+}
+- (CGRect)frameToCenter{
     // Center the image as it becomes smaller than the size of the screen
     CGSize boundsSize = self.bounds.size;
     CGRect frameToCenter = _photoImageView.frame;
-
+    
     // Horizontally
     if (frameToCenter.size.width < boundsSize.width) {
         frameToCenter.origin.x = floorf((boundsSize.width - frameToCenter.size.width) / 2.0);
     } else {
         frameToCenter.origin.x = 0;
     }
-
+    
     // Vertically
     if (frameToCenter.size.height < boundsSize.height) {
         frameToCenter.origin.y = floorf((boundsSize.height - frameToCenter.size.height) / 2.0);
     } else {
         frameToCenter.origin.y = 0;
     }
-
-    // Center
-    if (!CGRectEqualToRect(_photoImageView.frame, frameToCenter)) {
-        _photoImageView.frame = frameToCenter;
-    }
+    
+    return frameToCenter;
 }
 
 #pragma mark - UIScrollViewDelegate
