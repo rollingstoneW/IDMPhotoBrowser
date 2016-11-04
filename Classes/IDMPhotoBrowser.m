@@ -945,6 +945,12 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
     return captionView;
 }
 
+- (UIImage *) originalImageForPhoto:(id<IDMPhoto>)photo {
+    if (photo) {
+        return [photo originalImage];
+    }
+
+}
 - (UIImage *) imageForPhoto:(id<IDMPhoto>)photo {
     if (photo) {
         // Get image or obtain in background
@@ -960,6 +966,7 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
 
     return nil;
 }
+
 
 - (void) loadAdjacentPhotosIfNecessary:(id<IDMPhoto>)photo {
     IDMZoomingScrollView *page = [self pageDisplayingPhoto:photo];

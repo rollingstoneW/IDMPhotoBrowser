@@ -13,6 +13,7 @@
 // Declare private methods of browser
 @interface IDMPhotoBrowser ()
 - (UIImage *) imageForPhoto:(id<IDMPhoto>)photo;
+- (UIImage *) originalImageForPhoto:(id<IDMPhoto>)photo;
 - (void) cancelControlHiding;
 - (void) hideControlsAfterDelay;
 - (void) toggleControls;
@@ -111,10 +112,13 @@
 
         // Get image from browser as it handles ordering of fetching
         UIImage *img = [self.photoBrowser imageForPhoto:_photo];
+
         if (img) {
             // Hide ProgressView
             // _progressView.alpha = 0.0f;
-            [_progressView removeFromSuperview];
+            if ([self.photoBrowser originalImageForPhoto:_photo]) {
+              [_progressView removeFromSuperview];
+            }
 
             // Set image
             _photoImageView.image = img;
@@ -147,6 +151,9 @@
     if ([photo.photoURL.absoluteString isEqualToString:p.photoURL.absoluteString]) {
         if (_progressView.progress < progress) {
             [_progressView setProgress:progress animated:YES];
+            if (progress == 1) {
+                [_progressView removeFromSuperview];
+            }
         }
     }
 }
