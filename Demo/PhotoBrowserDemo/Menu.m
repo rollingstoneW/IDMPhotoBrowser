@@ -31,6 +31,8 @@
 
 - (void)viewDidLoad
 {
+    [super viewDidLoad];
+    
     [self setupTableViewFooterView];
 }
 
@@ -113,7 +115,7 @@
     browser.displayActionButton = NO;
     browser.displayArrowButton = YES;
     browser.displayCounterLabel = YES;
-    browser.usePopAnimation = YES;
+    browser.usePopAnimation = NO;
     browser.scaleImage = buttonSender.currentImage;
     if(buttonSender.tag == 102) browser.useWhiteBackgroundColor = YES;
     

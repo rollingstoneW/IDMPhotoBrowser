@@ -116,7 +116,7 @@
         if (img) {
             // Hide ProgressView
             // _progressView.alpha = 0.0f;
-            if ([self hasOriginImage]) {
+            if ([self hasOriginImage] || [_photo underlyingImage]) {
               [_progressView removeFromSuperview];
             }
 

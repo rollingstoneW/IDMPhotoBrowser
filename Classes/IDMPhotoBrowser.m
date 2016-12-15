@@ -183,7 +183,7 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
         _arrowButtonsChangePhotosAnimated = YES;
 
         _backgroundScaleFactor = 1.0;
-        _animationDuration = 0.28;
+        _animationDuration = 0.2;
         _senderViewForAnimation = nil;
         _scaleImage = nil;
 
@@ -370,57 +370,18 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
 #pragma mark - Animation
 
 - (void) performPresentAnimation {
-    self.view.alpha = 0.0f;
-    _pagingScrollView.alpha = 0.0f;
-
-    UIImage *imageFromView = _scaleImage ? _scaleImage : [self getImageFromView:_senderViewForAnimation];
-
-    if (_senderViewForAnimation.contentMode == UIViewContentModeScaleAspectFill) {
-        CGFloat imageAspect = imageFromView.size.width / imageFromView.size.height;
-        CGFloat viewAspect = CGRectGetWidth(_senderViewForAnimation.frame) / CGRectGetHeight(
-            _senderViewForAnimation.frame);
-
-        CGRect originalFrame = [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
-
-        CGFloat screenWidth = CGRectGetWidth([UIScreen mainScreen].bounds);
-        CGFloat screenHeight = CGRectGetHeight([UIScreen mainScreen].bounds);
-
-        // 水平方向没显示完整
-        if (imageAspect > viewAspect) {
-            CGFloat height = CGRectGetHeight(originalFrame);
-            CGFloat width = height / imageFromView.size.height * imageFromView.size.width;
-
-            CGFloat x = CGRectGetMinX(originalFrame) - ((width - CGRectGetWidth(originalFrame)) / 2);
-//            x = x < 0.f ? 0.f : x;
-            CGFloat y = CGRectGetMinY(originalFrame);
-
-            _senderViewOriginalFrame = CGRectMake(x, y, width, height);
-            // 竖直方向没显示完整
-        } else {
-            CGFloat width = CGRectGetWidth(originalFrame);
-            CGFloat height = width / imageFromView.size.width * imageFromView.size.height;
-
-            CGFloat x = CGRectGetMinX(originalFrame);
-            CGFloat y = CGRectGetMinY(originalFrame) - ((height - CGRectGetHeight(originalFrame)) / 2);
-            
-//            y = y < 0.f ? 0.f : y;
-
-            _senderViewOriginalFrame = CGRectMake(x, y, width, height);
-        }
-    } else {
-        _senderViewOriginalFrame =
-            [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
-    }
-
+    
+    IDMZoomingScrollView *scrollView = [self pageDisplayedAtIndex:_currentPageIndex];
+    id<IDMPhoto> currentPhoto = [_photos objectAtIndex:_currentPageIndex];
+    CGRect finalImageViewFrame = scrollView.photoImageView.frame;
 
     UIView *fadeView = [[UIView alloc] initWithFrame:_applicationWindow.bounds];
     fadeView.backgroundColor = [UIColor clearColor];
     [_applicationWindow addSubview:fadeView];
 
-    UIImageView *resizableImageView = [[UIImageView alloc] initWithImage:imageFromView];
+    UIImageView *resizableImageView = [[UIImageView alloc] initWithImage:scrollView.photoImageView.image];
     resizableImageView.frame = _senderViewOriginalFrame;
-    resizableImageView.contentMode =
-        _senderViewForAnimation ? _senderViewForAnimation.contentMode : UIViewContentModeScaleAspectFill;
+    resizableImageView.contentMode = UIViewContentModeScaleAspectFill;
     resizableImageView.backgroundColor = [UIColor clearColor];
     [_applicationWindow addSubview:resizableImageView];
     _senderViewForAnimation.hidden = YES;
@@ -432,19 +393,14 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
         [fadeView removeFromSuperview];
         [resizableImageView removeFromSuperview];
     };
-
-    [UIView animateWithDuration:_animationDuration animations:^{
-        fadeView.backgroundColor = self.useWhiteBackgroundColor ? [UIColor whiteColor] : [UIColor blackColor];
-    } completion:nil];
-
-    CGRect finalImageViewFrame = [self animationFrameForImage:imageFromView presenting:YES scrollView:nil];
-
+    
     if (_usePopAnimation) {
         [self animateView:resizableImageView
                   toFrame:finalImageViewFrame
                completion:completion];
     } else {
         [UIView animateWithDuration:_animationDuration animations:^{
+            fadeView.backgroundColor = self.useWhiteBackgroundColor ? [UIColor whiteColor] : [UIColor blackColor];
             resizableImageView.frame = finalImageViewFrame;
         } completion:^(BOOL finished) {
             completion();
@@ -459,20 +415,13 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
 
     float fadeAlpha = 1 - fabs(scrollView.frame.origin.y) / scrollView.frame.size.height;
 
-    UIImage *imageFromView = [scrollView.photo underlyingImage];
-    if (!imageFromView && [scrollView.photo respondsToSelector:@selector(placeholderImage)]) {
-        imageFromView = [scrollView.photo placeholderImage];
-    }
-
     UIView *fadeView = [[UIView alloc] initWithFrame:_applicationWindow.bounds];
     fadeView.backgroundColor = self.useWhiteBackgroundColor ? [UIColor whiteColor] : [UIColor blackColor];
     fadeView.alpha = fadeAlpha;
     [_applicationWindow addSubview:fadeView];
-
-    CGRect imageViewFrame = [self animationFrameForImage:imageFromView presenting:NO scrollView:scrollView];
-
-    UIImageView *resizableImageView = [[UIImageView alloc] initWithImage:imageFromView];
-    resizableImageView.frame = imageViewFrame;
+    
+    UIImageView *resizableImageView = [[UIImageView alloc] initWithImage:scrollView.photoImageView.image];
+    resizableImageView.frame = scrollView.photoImageView.frame;
     resizableImageView.contentMode = UIViewContentModeScaleAspectFill;
     resizableImageView.backgroundColor = [UIColor clearColor];
     resizableImageView.clipsToBounds = YES;
@@ -510,40 +459,6 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
     }
 } // performCloseAnimationWithScrollView
 
-- (CGRect) animationFrameForImage:(UIImage *)image presenting:(BOOL)presenting scrollView:(UIScrollView *)scrollView {
-    if (!image) {
-        return CGRectZero;
-    }
-
-    CGSize imageSize = image.size;
-
-    CGFloat maxWidth = CGRectGetWidth(_applicationWindow.bounds);
-    CGFloat maxHeight = CGRectGetHeight(_applicationWindow.bounds);
-
-    CGRect animationFrame = CGRectZero;
-
-    CGFloat aspect = imageSize.width / imageSize.height;
-    if (maxWidth / aspect <= maxHeight) {
-        animationFrame.size = imageSize;
-        IDMZoomingScrollView *scrollView = [self pageDisplayedAtIndex:_currentPageIndex];
-        UIImage *imageFromView = [scrollView.photo underlyingImage];
-        if (imageFromView) {
-            animationFrame.size = CGSizeMake(maxWidth, maxWidth / aspect);
-        }
-        
-    } else {
-        animationFrame.size = CGSizeMake(maxHeight * aspect, maxHeight);
-    }
-
-    animationFrame.origin.x = roundf((maxWidth - animationFrame.size.width) / 2.0f);
-    animationFrame.origin.y = roundf((maxHeight - animationFrame.size.height) / 2.0f);
-
-    if (!presenting) {
-        animationFrame.origin.y += scrollView.frame.origin.y;
-    }
-
-    return animationFrame;
-}
 
 #pragma mark - Genaral
 
@@ -638,10 +553,16 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
     _pagingScrollView.backgroundColor = [UIColor clearColor];
     _pagingScrollView.contentSize = [self contentSizeForPagingScrollView];
     [self.view addSubview:_pagingScrollView];
-
-    // Transition animation
-    [self performPresentAnimation];
-
+    
+    
+    
+    self.view.alpha = 0.0f;
+    _pagingScrollView.alpha = 0.0f;
+    _senderViewOriginalFrame = [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
+    id<IDMPhoto> currentPhoto = [_photos objectAtIndex:_currentPageIndex];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self performPresentAnimation];
+    });
     UIInterfaceOrientation currentOrientation = [UIApplication sharedApplication].statusBarOrientation;
 
     // Toolbar
@@ -962,9 +883,13 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
         if ([photo underlyingImage]) {
             return [photo underlyingImage];
         } else {
-            [photo loadUnderlyingImageAndNotify];
-            if ([photo respondsToSelector:@selector(placeholderImage)]) {
-                return [photo placeholderImage];
+            if ([photo originalImage]) {
+                return [photo originalImage];
+            } else {
+                [photo loadUnderlyingImageAndNotify];
+                if ([photo respondsToSelector:@selector(placeholderImage)]) {
+                    return [photo placeholderImage];
+                }
             }
         }
     }
