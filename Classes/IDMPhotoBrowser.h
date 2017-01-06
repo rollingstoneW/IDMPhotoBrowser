@@ -25,6 +25,10 @@
 - (void) photoBrowser:(IDMPhotoBrowser *)photoBrowser didDismissActionSheetWithButtonIndex:(NSUInteger)buttonIndex
            photoIndex:(NSUInteger)photoIndex;
 - (IDMCaptionView *) photoBrowser:(IDMPhotoBrowser *)photoBrowser captionViewForPhotoAtIndex:(NSUInteger)index;
+
+- (void) photoBrowser:(IDMPhotoBrowser *)photoBrowser didClickDeleteBtnAtPageIndex:(NSUInteger)index;
+- (void) popPhotoBrowser;
+
 @end
 
 // IDMPhotoBrowser
@@ -38,6 +42,7 @@
 @property (nonatomic) BOOL displayCounterLabel;
 @property (nonatomic) BOOL displayArrowButton;
 @property (nonatomic) BOOL displayActionButton;
+@property (nonatomic, assign, getter=isDeleteMode) BOOL deleteMode;
 @property (nonatomic, strong) NSArray *actionButtonTitles;
 @property (nonatomic, weak) UIImage *leftArrowImage, *leftArrowSelectedImage;
 @property (nonatomic, weak) UIImage *rightArrowImage, *rightArrowSelectedImage;
@@ -87,5 +92,7 @@
 
 // Get IDMPhoto at index
 - (id<IDMPhoto>) photoAtIndex:(NSUInteger)index;
+
+- (void) deletePageAtPageIndex:(NSInteger)index;
 
 @end

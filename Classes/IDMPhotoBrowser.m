@@ -23,7 +23,8 @@
 @interface IDMPhotoBrowser () {
     // Data
     NSMutableArray *_photos;
-
+    NSMutableArray *_deleteIndexArray;
+    
     // Views
     UIScrollView *_pagingScrollView;
 
@@ -554,15 +555,20 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
     _pagingScrollView.contentSize = [self contentSizeForPagingScrollView];
     [self.view addSubview:_pagingScrollView];
     
+    if (_senderViewForAnimation) {
+        self.view.alpha = 0.0f;
+        _pagingScrollView.alpha = 0.0f;
+        _senderViewOriginalFrame = [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
+        id<IDMPhoto> currentPhoto = [_photos objectAtIndex:_currentPageIndex];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [self performPresentAnimation];
+        });
+    }
+
+    if (self.isDeleteMode) {
+        [self setupNavigationBarItems];
+    }
     
-    
-    self.view.alpha = 0.0f;
-    _pagingScrollView.alpha = 0.0f;
-    _senderViewOriginalFrame = [_senderViewForAnimation.superview convertRect:_senderViewForAnimation.frame toView:nil];
-    id<IDMPhoto> currentPhoto = [_photos objectAtIndex:_currentPageIndex];
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self performPresentAnimation];
-    });
     UIInterfaceOrientation currentOrientation = [UIApplication sharedApplication].statusBarOrientation;
 
     // Toolbar
@@ -670,11 +676,24 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
 
     // Update UI
     [self hideControlsAfterDelay];
+
+    if (_senderViewForAnimation) {
+        [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationFade];
+    }
+
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+    [super viewWillDisappear:animated];
+    [[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:UIStatusBarAnimationFade];
 }
 
 - (void) viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
     _viewIsActive = YES;
+    if (self.isDeleteMode) {
+        [self performSelector:@selector(toggleControls) withObject:nil afterDelay:0.2];
+    }
 }
 
 // Release any retained subviews of the main view.
@@ -784,7 +803,7 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
     if (_displayDoneButton && !self.navigationController.navigationBar) {
         [self.view addSubview:_doneButton];
     }
-
+    
     // Toolbar items & navigation
     UIBarButtonItem *fixedLeftSpace =
         [[UIBarButtonItem alloc] initWithBarButtonSystemItem:
@@ -831,6 +850,69 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
         [self.view addGestureRecognizer:_panGesture];
     }
 } // performLayout
+
+- (void) setupNavigationBarItems {
+    
+    _deleteIndexArray = [NSMutableArray array];
+    self.navigationController.navigationBar.barTintColor = [UIColor blackColor];
+    self.navigationController.navigationBar.alpha = 0.8;
+    [self.navigationController.navigationBar setTitleTextAttributes:@{NSForegroundColorAttributeName:[UIColor whiteColor]}];
+    
+    UIButton *backButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    UIEdgeInsets insets = UIEdgeInsetsMake(0, -10, 0, 10);
+    [backButton setImageEdgeInsets:insets];
+    [backButton setFrame:CGRectMake(0, 0, 44, 44)];
+    [backButton addTarget:self action:@selector(backButtonAction) forControlEvents:UIControlEventTouchUpInside];
+    [backButton setImage:[UIImage imageNamed:@"IDMPhotoBrowser.bundle/images/IDMPhotoBrowser_back.png"] forState:UIControlStateNormal];
+    
+    UIBarButtonItem *leftItem = [[UIBarButtonItem alloc] initWithCustomView:backButton];
+    
+    UIBarButtonItem *leftFixeItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
+    
+    leftFixeItem.width = -15;
+    self.navigationItem.leftBarButtonItems = @[leftFixeItem,leftItem];
+    
+    UIButton *deleteButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    deleteButton.frame = CGRectMake(0, 0, 25, 25);
+    [deleteButton setBackgroundImage:[UIImage imageNamed:@"IDMPhotoBrowser.bundle/images/IDMPhotoBrowser_delete.png"] forState:UIControlStateNormal];
+    [deleteButton addTarget:self action:@selector(deleteButtonAction) forControlEvents:UIControlEventTouchUpInside];
+    
+    UIBarButtonItem *rightItem = [[UIBarButtonItem alloc] initWithCustomView:deleteButton];
+    
+    UIBarButtonItem *rightFixeItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
+    rightFixeItem.width = -10;
+    self.navigationItem.rightBarButtonItems = @[rightFixeItem,rightItem];
+}
+
+- (void) backButtonAction {
+    if ([self.delegate respondsToSelector:@selector(popPhotoBrowser)]) {
+        [self.delegate popPhotoBrowser];
+    }
+}
+
+- (void) deleteButtonAction {
+    if ([self.delegate respondsToSelector:@selector(photoBrowser:didClickDeleteBtnAtPageIndex:)]) {
+        [self.delegate photoBrowser:self didClickDeleteBtnAtPageIndex:_currentPageIndex];
+    }
+}
+
+- (void) deletePageAtPageIndex:(NSInteger)index {
+    [_photos removeObjectAtIndex:index];
+    
+    if (_photos.count == 0) {
+        if ([self.delegate respondsToSelector:@selector(popPhotoBrowser)]) {
+            [self.delegate popPhotoBrowser];
+        }
+        return;
+    }
+    
+    [self calculateCurrentPage];
+    
+    IDMZoomingScrollView *scrollView = [self pageDisplayedAtIndex:index];
+    [scrollView removeFromSuperview];
+    
+    [self reloadData];
+}
 
 #pragma mark - Data
 
@@ -966,7 +1048,7 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
     if (iLastIndex > [self numberOfPhotos] - 1) {
         iLastIndex = [self numberOfPhotos] - 1;
     }
-
+    
     // Recycle no longer needed pages
     NSInteger pageIndex;
     for (IDMZoomingScrollView *page in _visiblePages) {
@@ -978,13 +1060,13 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
             IDMLog(@"Removed page at index %i", PAGE_INDEX(page));
         }
     }
-
+    
     [_visiblePages minusSet:_recycledPages];
     while (_recycledPages.count > 2) // Only keep 2 recycled pages
     {
         [_recycledPages removeObject:[_recycledPages anyObject]];
     }
-
+    
     // Add missing pages
     for (NSUInteger index = (NSUInteger)iFirstIndex; index <= (NSUInteger)iLastIndex; index++) {
         if (![self isDisplayingPageForIndex:index]) {
@@ -1164,6 +1246,10 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
     [self tilePages];
 
     // Calculate current page
+    [self calculateCurrentPage];
+}
+
+- (void) calculateCurrentPage {
     CGRect visibleBounds = _pagingScrollView.bounds;
     NSInteger index = (NSInteger)(floorf(CGRectGetMidX(visibleBounds) / CGRectGetWidth(visibleBounds)));
     if (index < 0) {
@@ -1176,7 +1262,7 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
     _currentPageIndex = index;
     if (_currentPageIndex != previousCurrentPage) {
         [self didStartViewingPageAtIndex:index];
-
+        
         if (_arrowButtonsChangePhotosAnimated) {
             [self updateToolbar];
         }
@@ -1200,6 +1286,13 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
 #pragma mark - Toolbar
 
 - (void) updateToolbar {
+
+    if (self.isDeleteMode) {
+        self.title = [NSString stringWithFormat:@"%lu %@ %lu", (unsigned long)(_currentPageIndex + 1),
+                       IDMPhotoBrowserLocalizedStrings(@"of"), (unsigned long)[self numberOfPhotos]];
+        return;
+    }
+    
     // Counter
     if ([self numberOfPhotos] > 1) {
         _counterLabel.text =
@@ -1255,8 +1348,8 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
     }
 
     // Hide/show bars
-    [UIView animateWithDuration:(animated ? 0.1 : 0) animations:^(void) {
-        CGFloat alpha = hidden ? 0 : 1;
+    [UIView animateWithDuration:(animated ? 0.4 : 0) animations:^(void) {
+        CGFloat alpha = hidden ? 0 : 0.8;
         [self.navigationController.navigationBar setAlpha:alpha];
         [_toolbar setAlpha:alpha];
         [_doneButton setAlpha:alpha];
