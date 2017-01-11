@@ -1361,6 +1361,8 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
     if (!permanent) {
         [self hideControlsAfterDelay];
     }
+    
+    [[UIApplication sharedApplication] setStatusBarHidden:hidden withAnimation:UIStatusBarAnimationFade];
 
     [self setNeedsStatusBarAppearanceUpdate];
 }
