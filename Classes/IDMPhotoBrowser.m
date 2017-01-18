@@ -1440,10 +1440,14 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
 - (void) actionButtonPressed:(id)sender {
     id <IDMPhoto> photo = [self photoAtIndex:_currentPageIndex];
 
-    if ([self numberOfPhotos] > 0 && [photo underlyingImage]) {
+    if ([self numberOfPhotos] > 0 && ([photo underlyingImage] || [photo originalImage])) {
         if (!_actionButtonTitles) {
+            UIImage *image = [photo underlyingImage];
+            if (!image) {
+                image = [photo originalImage];
+            }
             // Activity view
-            NSMutableArray *activityItems = [NSMutableArray arrayWithObject:[photo underlyingImage]];
+            NSMutableArray *activityItems = [NSMutableArray arrayWithObject:image];
             if (photo.caption) {
                 [activityItems addObject:photo.caption];
             }
