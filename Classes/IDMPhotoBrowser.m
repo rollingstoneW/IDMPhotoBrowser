@@ -10,8 +10,6 @@
 #import "IDMPhotoBrowser.h"
 #import "IDMZoomingScrollView.h"
 
-#import "pop/POP.h"
-
 #ifndef IDMPhotoBrowserLocalizedStrings
 #define IDMPhotoBrowserLocalizedStrings(key) \
     NSLocalizedStringFromTableInBundle((key), nil, \
@@ -1527,18 +1525,15 @@ leftArrowSelectedImage = _leftArrowSelectedImage, rightArrowSelectedImage = _rig
 #pragma mark - pop Animation
 
 - (void) animateView:(UIView *)view toFrame:(CGRect)frame completion:(void (^)(void))completion {
-    POPSpringAnimation *animation = [POPSpringAnimation animationWithPropertyNamed:kPOPViewFrame];
-
-    [animation setSpringBounciness:6];
-    [animation setDynamicsMass:1];
-    [animation setToValue:[NSValue valueWithCGRect:frame]];
-    [view pop_addAnimation:animation forKey:nil];
-
-    if (completion) {
-        [animation setCompletionBlock:^(POPAnimation *animation, BOOL finished) {
-            completion();
-        }];
-    }
+    [UIView animateWithDuration:.6 delay:0 usingSpringWithDamping:.5 initialSpringVelocity:.4 options:UIViewAnimationOptionCurveEaseOut animations:^{
+        view.frame = frame;
+    } completion:^(BOOL finished) {
+        if (finished) {
+            if (completion) {
+                completion();
+            }
+        }
+    }];
 }
 
 @end
