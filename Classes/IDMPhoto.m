@@ -95,28 +95,6 @@ caption = _caption;
     return photos;
 }
 
-+ (NSArray *)photosWithURLs:(NSArray *)urlsArray placeholderUrlArray:(NSArray *)placeholderUrls{
-    NSMutableArray *photos = [NSMutableArray arrayWithCapacity:urlsArray.count];
-    for (NSInteger i=0; i<urlsArray.count; i++) {
-        id originalUrl = [urlsArray objectAtIndex:i];
-        id placeholderUrl = [placeholderUrls objectAtIndex:i];
-        
-        if ([originalUrl isKindOfClass:[NSURL class]] && [placeholderUrl isKindOfClass:[NSURL class]]) {
-            IDMPhoto *photo = [IDMPhoto photoWithURL:originalUrl];
-            photo.placeholderImage = [[SDImageCache sharedImageCache] imageFromDiskCacheForKey:[placeholderUrl absoluteString]];
-            [photos addObject:photo];
-        }
-        
-        if ([originalUrl isKindOfClass:[NSString class]]  && [placeholderUrl isKindOfClass:[NSString class]]) {
-            IDMPhoto *photo = [IDMPhoto photoWithURL:[NSURL URLWithString:originalUrl]];
-            photo.placeholderImage = [[SDImageCache sharedImageCache] imageFromDiskCacheForKey:placeholderUrl];
-            [photos addObject:photo];
-        }
-    }
-    
-    return photos;
-}
-
 #pragma mark NSObject
 
 - (id)initWithImage:(UIImage *)image {
@@ -146,10 +124,6 @@ caption = _caption;
     return _underlyingImage;
 }
 
-- (UIImage *)originalImage{
-    return [[SDImageCache sharedImageCache] imageFromDiskCacheForKey:[_photoURL absoluteString]];
-}
-
 - (void)loadUnderlyingImageAndNotify {
     NSAssert([[NSThread currentThread] isMainThread], @"This method must be called on the main thread.");
     _loadingInProgress = YES;
@@ -162,19 +136,20 @@ caption = _caption;
             [self performSelectorInBackground:@selector(loadImageFromFileAsync) withObject:nil];
         } else if (_photoURL) {
             // Load async from web (using SDWebImageManager)
-            SDWebImageManager *manager = [SDWebImageManager sharedManager];
-            [manager downloadImageWithURL:_photoURL options:SDWebImageRetryFailed progress:^(NSInteger receivedSize, NSInteger expectedSize) {
-                CGFloat progress = ((CGFloat)receivedSize)/((CGFloat)expectedSize);
-                if (self.progressUpdateBlock) {
-                    self.progressUpdateBlock(progress);
-                }
-            } completed:^(UIImage *image, NSError *error, SDImageCacheType cacheType, BOOL finished, NSURL *imageURL) {
-                if (image) {
-                    self.underlyingImage = image;
-                    [self performSelectorOnMainThread:@selector(imageLoadingComplete) withObject:nil waitUntilDone:NO];
-                }
-            }];
-
+			
+			[[SDWebImageManager sharedManager] loadImageWithURL:_photoURL options:SDWebImageRetryFailed progress:^(NSInteger receivedSize, NSInteger expectedSize, NSURL * _Nullable targetURL) {
+				CGFloat progress = ((CGFloat)receivedSize)/((CGFloat)expectedSize);
+				
+				if (self.progressUpdateBlock) {
+					self.progressUpdateBlock(progress);
+				}
+			} completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, SDImageCacheType cacheType, BOOL finished, NSURL * _Nullable imageURL) {
+				if (image) {
+					self.underlyingImage = image;
+				}
+				
+				[self performSelectorOnMainThread:@selector(imageLoadingComplete) withObject:nil waitUntilDone:NO];
+			}];
         } else {
             // Failed - no source
             self.underlyingImage = nil;
@@ -227,8 +202,7 @@ caption = _caption;
 }*/
 
 - (UIImage *)decodedImageWithImage:(UIImage *)image {
-    if (image.images)
-    {
+    if (image.images) {
         // Do not decode animated images
         return image;
     }
