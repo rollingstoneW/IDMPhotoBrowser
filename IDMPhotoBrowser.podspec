@@ -11,6 +11,6 @@ Pod::Spec.new do |s|
   s.resources     =  'Classes/IDMPhotoBrowser.bundle', 'Classes/IDMPBLocalizations.bundle'
   s.framework     =  'MessageUI', 'QuartzCore', 'SystemConfiguration', 'MobileCoreServices', 'Security'
   s.requires_arc  =  true
-  s.dependency       'SDWebImage'
+  s.dependency       'SDWebImage', '3.8.2'
   s.dependency       'DACircularProgress'
   end
